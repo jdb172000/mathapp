@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Math Genius — Grades 4–8</title>
+  <meta name="description" content="AI-powered math tutor for Grades 4–8 with a built-in BODMAS/PEMDAS guide." />
+  <style>
+    :root{
+      --bg: #0b1020;
+      --panel: #101935;
+      --muted: #9db2ce;
+      --text: #eaf2ff;
+      --brand: #4cc9f0;
+      --accent: #80ffea;
+      --danger: #ff6b6b;
+      --ok: #22c55e;
+      --shadow: 0 12px 30px rgba(0,0,0,.35);
+      --radius: 20px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;}
+    body{
+      margin:0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 80% -10%, rgba(76,201,240,.15), transparent 60%),
+                  radial-gradient(1000px 600px at -10% 100%, rgba(128,255,234,.12), transparent 60%),
+                  var(--bg);
+      color:var(--text);
+    }
+
+    /* Layout */
+    .wrap{display:grid; grid-template-rows:auto 1fr auto; min-height:100vh;}
+    header{
+      position:sticky; top:0; z-index:5; backdrop-filter: blur(8px);
+      background: rgba(11,16,32,.6); border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .bar{max-width:1100px; margin:0 auto; padding:14px 18px; display:flex; gap:12px; align-items:center;}
+    .logo{display:flex; align-items:center; gap:10px;}
+    .logo .dot{width:12px; height:12px; border-radius:50%; background:var(--brand); box-shadow:0 0 18px var(--brand)}
+    .title{font-weight:700; letter-spacing:.3px}
+    .sub{color:var(--muted); font-size:12px}
+    .spacer{flex:1}
+    .controls{display:flex; gap:10px; align-items:center}
+
+    .pill{display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; background:#0e1630; border:1px solid rgba(255,255,255,.08)}
+    .select{appearance:none; background:transparent; border:none; color:var(--text); font-weight:600}
+    .hint{font-size:12px; color:var(--muted)}
+
+    main{max-width:1100px; margin:18px auto; padding:0 18px; display:grid; grid-template-columns: 1fr 320px; gap:16px}
+    @media (max-width: 980px){ main{grid-template-columns:1fr} }
+
+    /* Chat panel */
+    .card{background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01)); border:1px solid rgba(255,255,255,.08); border-radius: var(--radius); box-shadow: var(--shadow);}
+    .chat{display:flex; flex-direction:column; height:72vh; min-height:560px}
+    .feed{flex:1; overflow:auto; padding:18px 18px}
+    .msg{display:grid; grid-template-columns: 38px 1fr; gap:12px; margin-bottom:14px}
+    .avatar{width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg, var(--brand), #5583f1)}
+    .bubble{background:#0e1736; border:1px solid rgba(255,255,255,.06); padding:12px 14px; border-radius:14px; line-height:1.45}
+    .me .bubble{background:#0c2030; border-color: rgba(128,255,234,.25)}
+    .meta{font-size:12px; color:var(--muted); margin-bottom:6px}
+
+    .composer{display:flex; gap:10px; padding:12px; border-top:1px solid rgba(255,255,255,.08); align-items:flex-start}
+    textarea{flex:1; resize:none; max-height:180px; min-height:60px; background:#0b152f; color:var(--text); border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:12px; outline:none}
+    button{background:var(--brand); color:#081022; border:none; padding:12px 16px; border-radius:12px; font-weight:700; cursor:pointer}
+    button:disabled{opacity:.6; cursor:not-allowed}
+    .ghost{background:transparent; color:var(--text); border:1px solid rgba(255,255,255,.12)}
+
+    /* keypad + builders */
+    .keypad{display:grid; grid-template-columns: repeat(10, minmax(44px,1fr)); gap:8px; margin-top:12px}
+    .key{padding:10px 8px; background:#0e1630; border:1px solid rgba(255,255,255,.08); border-radius:10px; text-align:center; user-select:none}
+    .key:hover{background:#101d3a}
+    .key.wide{grid-column: span 2}
+    .key.op{background:#0e1d3a; border-color: rgba(128,255,234,.18)}
+    .key.equal{background:linear-gradient(135deg, var(--brand), #7be6ff); color:#051223; font-weight:900}
+
+    .build-row{display:flex; gap:10px; flex-wrap:wrap; margin-top:8px}
+    .builder{display:flex; align-items:center; gap:8px; background:#0e1630; border:1px solid rgba(255,255,255,.08); padding:8px 10px; border-radius:12px}
+    .builder input{width:70px; background:#0b152f; color:var(--text); border:1px solid rgba(255,255,255,.08); border-radius:8px; padding:6px 8px; outline:none}
+    .builder .slash{width:24px; text-align:center; color:var(--muted)}
+    .builder .insert{background:var(--accent); color:#06101c; font-weight:800; border:none; border-radius:10px; padding:8px 10px}
+
+    /* Right rail */
+    .rail{display:flex; flex-direction:column; gap:16px}
+    .rail .panel{padding:14px}
+    .panel h3{margin:0 0 8px; font-size:14px; letter-spacing:.2px; color:var(--accent)}
+    .list{display:flex; flex-direction:column; gap:8px}
+    .tip{font-size:13px; color:var(--muted)}
+
+    /* Floating BODMAS/PEMDAS */
+    .bodmas{position: fixed; bottom: 20px; right: 20px; z-index:6;}
+    .bodmas .box{background:#0d1b2a; border:1px solid rgba(255,255,255,.08); border-radius:16px; box-shadow: var(--shadow); width:280px}
+    .bodmas header{position:relative; top:auto; backdrop-filter:none; background:transparent; border-bottom:1px solid rgba(255,255,255,.08); border-top-left-radius:16px; border-top-right-radius:16px}
+    .bodmas .hdr{display:flex; align-items:center; justify-content:space-between; padding:10px 12px}
+    .bodmas h4{margin:0; font-size:14px; color:var(--brand)}
+    .toggle{background:transparent; color:var(--text); border:none; padding:6px 10px; cursor:pointer}
+    .bodmas .content{padding:10px 12px;}
+    table{width:100%; border-collapse:collapse;}
+    td{padding:6px 6px; border-bottom:1px solid rgba(255,255,255,.08); font-size:13px}
+    tr:last-child td{border-bottom:none}
+    .muted{color:var(--muted)}
+    .badge{display:inline-block; font-size:10px; padding:2px 8px; border:1px solid rgba(255,255,255,.12); border-radius:999px; margin-left:6px; color:var(--muted)}
+
+    /* Toast */
+    .toast{position:fixed; left:50%; transform:translateX(-50%); bottom:100px; background:#0e1736; color:var(--text); border:1px solid rgba(255,255,255,.08); padding:10px 14px; border-radius:12px; display:none}
+    .show{display:block}
+
+    code, kbd {background: rgba(255,255,255,.06); padding: 2px 6px; border-radius: 6px;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="bar">
+        <div class="logo"><span class="dot"></span><div>
+          <div class="title" data-i18n="title">Math Genius <span class="badge" data-i18n="grades">Grades 4–8</span></div>
+          <div class="sub" data-i18n="subtitle">Accurate, step-by-step help • English / Afrikaans</div>
+        </div></div>
+        <div class="spacer"></div>
+        <div class="controls">
+          <div class="pill" title="Language">
+            <span data-i18n="language">Language</span>
+            <select id="lang" class="select" aria-label="Language">
+              <option value="en" selected>English</option>
+              <option value="af">Afrikaans</option>
+            </select>
+          </div>
+          <button class="ghost" id="clearBtn" title="Clear chat" data-i18n="clear">Clear</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <!-- Chat -->
+      <section class="card chat" aria-label="Chat">
+        <div id="feed" class="feed" role="log" aria-live="polite"></div>
+
+        <!-- keypad + builders -->
+        <div class="composer">
+          <div style="flex:1">
+            <div class="build-row">
+              <!-- Fraction builder -->
+              <div class="builder" title="Insert a fraction">
+                <span data-i18n="fraction">Fraction</span>
+                <input id="fracNum" aria-label="Numerator" placeholder="a" />
+                <span class="slash">—</span>
+                <input id="fracDen" aria-label="Denominator" placeholder="b" />
+                <button class="insert" id="insertFrac" data-i18n="insert">Insert</button>
+              </div>
+
+              <!-- Exponent builder -->
+              <div class="builder" title="Insert exponent">
+                <span data-i18n="exponent">Exponent</span>
+                <input id="expBase" aria-label="Base" placeholder="base" />
+                <span class="slash">^</span>
+                <input id="expPow" aria-label="Exponent" placeholder="power" />
+                <button class="insert" id="insertExp" data-i18n="insert">Insert</button>
+              </div>
+
+              <!-- Root builder -->
+              <div class="builder" title="Insert square root">
+                <span>√</span>
+                <input id="rootVal" aria-label="Radicand" placeholder="number" />
+                <button class="insert" id="insertRoot" data-i18n="insert">Insert</button>
+              </div>
+            </div>
+
+            <div class="keypad" aria-label="Math keypad">
+              <!-- Numbers -->
+              <div class="key" data-k="7">7</div>
+              <div class="key" data-k="8">8</div>
+              <div class="key" data-k="9">9</div>
+              <div class="key op" data-k="+">+</div>
+              <div class="key op" data-k="-">−</div>
+              <div class="key op" data-k="(">(</div>
+              <div class="key op" data-k=")">)</div>
+              <div class="key op" data-k="^">^</div>
+              <div class="key op" data-k="sqrt(">√</div>
+              <div class="key ghost wide" id="copyLast" data-i18n="copy">Copy last</div>
+
+              <div class="key" data-k="4">4</div>
+              <div class="key" data-k="5">5</div>
+              <div class="key" data-k="6">6</div>
+              <div class="key op" data-k="*">×</div>
+              <div class="key op" data-k="/">÷</div>
+              <div class="key" data-k="1">1</div>
+              <div class="key" data-k="2">2</div>
+              <div class="key" data-k="3">3</div>
+              <div class="key" data-k="0">0</div>
+              <div class="key equal wide" id="askBtn" data-i18n="solve">Answer</div>
+            </div>
+
+            <div style="margin-top:10px">
+              <textarea id="input" placeholder="Ask a maths question… e.g., 12 ÷ (3 × 2) + 5" spellcheck="true" aria-label="Math input"></textarea>
+            </div>
+          </div>
+          <div>
+            <button id="send" style="min-width:110px" data-i18n="ask">Ask</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right rail: quick tips -->
+      <aside class="rail">
+        <div class="card panel">
+          <h3 data-i18n="quick">Quick Starters</h3>
+          <div class="list">
+            <button class="ghost" onclick="prefill('Solve: 3 + 6 × (5 − 2) ÷ 3')" data-i18n="qs1">Order of operations</button>
+            <button class="ghost" onclick="prefill('Find the LCM of 6 and 8')" data-i18n="qs2">LCM</button>
+            <button class="ghost" onclick="prefill('What is 3/4 + 2/3? Show steps')" data-i18n="qs3">Fractions</button>
+            <button class="ghost" onclick="prefill('Convert 450 cm to meters')" data-i18n="qs4">Units</button>
+          </div>
+          <p class="tip" data-i18n="tipText">Tip: Use brackets to be clear, e.g., <span class="muted">12 ÷ (3 × 2)</span>.</p>
+        </div>
+        <div class="card panel">
+          <h3 data-i18n="safety">Safety & Accuracy</h3>
+          <p class="tip" data-i18n="safetyTip">Always check your steps. The app shows the method so you can learn, not just the final answer.</p>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <!-- Floating BODMAS/PEMDAS box -->
+  <div class="bodmas" aria-live="polite">
+    <div class="box">
+      <div class="hdr">
+        <h4>BODMAS / PEMDAS</h4>
+        <button class="toggle" id="toggleBodmas" aria-expanded="true" aria-controls="bodmasContent" data-i18n="hide">Hide</button>
+      </div>
+      <div id="bodmasContent" class="content">
+        <table>
+          <tr><td><strong>B / P</strong></td><td data-i18n="brackets">Brackets / Parentheses</td></tr>
+          <tr><td><strong>O / E</strong></td><td data-i18n="orders">Orders / Exponents</td></tr>
+          <tr><td><strong>D</strong></td><td data-i18n="division">Division</td></tr>
+          <tr><td><strong>M</strong></td><td data-i18n="multiplication">Multiplication</td></tr>
+          <tr><td><strong>A</strong></td><td data-i18n="addition">Addition</td></tr>
+          <tr><td><strong>S</strong></td><td data-i18n="subtraction">Subtraction</td></tr>
+        </table>
+        <p class="tip" data-i18n="ltr">Left-to-right for <em>division & multiplication</em> and again for <em>addition & subtraction</em>.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="alert" aria-live="assertive"></div>
+
+  <script>
+    // i18n
+    const LANG = { en:{title:"Math Genius", grades:"Grades 4–8", subtitle:"Accurate, step-by-step help • English / Afrikaans",
+      language:"Language", clear:"Clear chat", fraction:"Fraction", exponent:"Exponent", insert:"Insert",
+      solve:"Answer", ask:"Ask", copy:"Copy last", quick:"Quick Starters", qs1:"Order of operations",
+      qs2:"LCM", qs3:"Fractions", qs4:"Units", tipText:"Tip: Use brackets to be clear, e.g., 12 ÷ (3 × 2).",
+      safety:"Safety & Accuracy", safetyTip:"Always check your steps. The app shows the method so you can learn, not just the final answer.",
+      brackets:"Brackets", orders:"Orders / Exponents", division:"Division", multiplication:"Multiplication",
+      addition:"Addition", subtraction:"Subtraction", hide:"Hide", ltr:"Left-to-right for division & multiplication and addition & subtraction."},
+      af:{title:"Wiskunde Genie", grades:"Graad 4–8", subtitle:"Akkurate stap-vir-stap hulp • Engels / Afrikaans",
+      language:"Taal", clear:"Maak skoon", fraction:"Breuk", exponent:"Eksponent", insert:"Voeg in",
+      solve:"Antwoord", ask:"Vra", copy:"Kopieer laaste", quick:"Vinnige Voorbeelde", qs1:"Volgorde van bewerkings",
+      qs2:"KGV", qs3:"Breuke", qs4:"Eenhede", tipText:"Wenk: Gebruik hakies om duidelik te wees, bv. 12 ÷ (3 × 2).",
+      safety:"Veiligheid & Akkuraatheid", safetyTip:"Kontroleer altyd jou stappe. Die app wys die metode sodat jy kan leer, nie net die finale antwoord nie.",
+      brackets:"Hakies", orders:"Eksponente", division:"Divisie", multiplication:"Vermenigvuldiging",
+      addition:"Optelling", subtraction:"Aftrekking", hide:"Verberg", ltr:"Lees van links na regs vir divisie & vermenigvuldiging en optelling & aftrekking."}};
+
+    const elToast=document.getElementById("toast");
+    function showToast(msg,d=2500){elToast.textContent=msg; elToast.classList.add("show"); setTimeout(()=>elToast.classList.remove("show"),d)}
+
+    // Language switching
+    document.getElementById("lang").addEventListener("change",e=>{
+      const val=e.target.value; document.querySelectorAll("[data-i18n]").forEach(el=>el.textContent=LANG[val][el.dataset.i18n])
+    });
+
+    // Chat & input
+    const feed=document.getElementById("feed"), input=document.getElementById("input");
+    document.getElementById("clearBtn").addEventListener("click",()=>{feed.innerHTML=""; showToast("Chat cleared")});
+    function prefill(txt){input.value=txt; input.focus()}
+
+    document.getElementById("send").addEventListener("click",sendInput);
+    document.getElementById("askBtn").addEventListener("click",sendInput);
+    function sendInput(){
+      const q=input.value.trim(); if(!q) return; appendMsg(q,"me"); input.value=""; solveWithBackend(q);
+    }
+    function appendMsg(msg,who="ai"){const d=document.createElement("div");d.className="msg "+who; d.innerHTML=`<div class="avatar"></div><div class="bubble">${msg}</div>`; feed.appendChild(d); feed.scrollTop=feed.scrollHeight;}
+
+    // Keypad
+    document.querySelectorAll(".key").forEach(k=>k.addEventListener("click",()=>{const v=k.dataset.k; if(v){input.value+=v; input.focus()}}));
+    document.getElementById("copyLast").addEventListener("click",()=>{const msgs=document.querySelectorAll(".msg.me, .msg.ai"); if(msgs.length){input.value=msgs[msgs.length-1].querySelector(".bubble").textContent}});
+
+    // Builders
+    document.getElementById("insertFrac").addEventListener("click",()=>{
+      const a=document.getElementById("fracNum").value, b=document.getElementById("fracDen").value; if(a&&b){input.value+=`(${a}/${b})`;}
+    });
+    document.getElementById("insertExp").addEventListener("click",()=>{
+      const a=document.getElementById("expBase").value, b=document.getElementById("expPow").value; if(a&&b){input.value+=`(${a}^${b})`;}
+    });
+    document.getElementById("insertRoot").addEventListener("click",()=>{
+      const a=document.getElementById("rootVal").value; if(a){input.value+=`√(${a})`;}
+    });
+
+    // BODMAS toggle
+    document.getElementById("toggleBodmas").addEventListener("click",()=>{
+      const content=document.getElementById("bodmasContent"), btn=document.getElementById("toggleBodmas");
+      if(content.style.display==="none"){content.style.display="block"; btn.textContent=LANG[document.getElementById("lang").value].hide;} else{content.style.display="none"; btn.textContent=LANG[document.getElementById("lang").value].hide;}
+    });
+
+    // Backend solving
+    async function solveWithBackend(prompt){
+      appendMsg("Thinking…","ai");
+      try{
+        const res=await fetch("/solve",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt})});
+        const data=await res.json();
+        feed.lastChild.querySelector(".bubble").textContent=data.answer;
+      }catch(e){feed.lastChild.querySelector(".bubble").textContent="Error fetching answer"; console.error(e);}
+    }
+  </script>
+</body>
+</html>
